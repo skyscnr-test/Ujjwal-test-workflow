@@ -2,55 +2,11 @@ name: Dependency Review Reusable Workflow
 on:
   pull_request:
   workflow_call:
-    inputs:
-      runner:
-        required: false
-        type: string
-        default: 'ubuntu-latest-codeql'
-        description: |
-          A specific runner to use for the job. Defaults to 'ubuntu-latest-codeql'.
-      
-      fail-on-severity:
-        required: false
-        type: string
-        default: 'high'
-        description: |
-          Minimum severity level to fail the workflow.
-          Options: low, moderate, high, critical
-      
-      fail-on-scopes:
-        required: false
-        type: string
-        default: 'runtime'
-        description: |
-          Dependency scopes to check for vulnerabilities.
-          Options: runtime, development, all
-      
-      license-check:
-        required: false
-        type: boolean 
-        default: false
-        description: |
-          Whether to check for licenses. Defaults to false.
-      
-      openssf-check:
-        required: false
-        type: boolean
-        default: false
-        description: |
-          Whether to check for OpenSSF Scorecard. Defaults to false.
-      
-      comment-summary:
-        required: false
-        type: boolean
-        default: true
-        description: |
-          Whether to comment summary in PR. Defaults to true.
 
 jobs:
   dependency-review:
     name: Dependency Review
-    runs-on: ${{ inputs.runner }}
+    runs-on: ubuntu-latest-codeql
     permissions:
       contents: read
       pull-requests: write
@@ -63,13 +19,13 @@ jobs:
         uses: actions/dependency-review-action@v4.8.2
         with:
           # Security settings
-          fail-on-severity: ${{ inputs.fail-on-severity }}
-          fail-on-scopes: ${{ inputs.fail-on-scopes }}
+          fail-on-severity: high
+          fail-on-scopes: runtime
           vulnerability-check: true
-          license-check: ${{ inputs.license-check }}
+          license-check: false
           
           # PR comments for better UX
-          comment-summary-in-pr: ${{ inputs.comment-summary }}
+          comment-summary-in-pr: false
           
           # Show OpenSSF Scorecard for additional security insights
-          show-openssf-scorecard: ${{ inputs.openssf-check }}
+          show-openssf-scorecard: false
