@@ -1,7 +1,12 @@
-name: Dependency Review Reusable Workflow 
+name: Dependency Review (required)
+
 on:
   pull_request:
-  workflow_call:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches:
+      - main
+      - master
+      - 'release/*'
 
 jobs:
   dependency-review:
@@ -10,22 +15,18 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      security-events: write 
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-            
+
       - name: Dependency Review
         uses: actions/dependency-review-action@v4.8.2
         with:
-          # Security settings
           fail-on-severity: high
           fail-on-scopes: runtime
           vulnerability-check: true
           license-check: false
-          
-          # PR comments for better UX
-          comment-summary-in-pr: false
-          
-          # Show OpenSSF Scorecard for additional security insights
+          comment-summary-in-pr: true
           show-openssf-scorecard: false
