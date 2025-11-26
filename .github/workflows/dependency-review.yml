@@ -1,5 +1,6 @@
 name: Dependency Review Reusable Workflow 
 on:
+  pull_request:
   workflow_call:
     inputs:
       runner:
