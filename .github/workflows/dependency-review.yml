@@ -33,6 +33,10 @@ on:
         required: false
         type: boolean
         default: true
+      retry-on-snapshot-warnings:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   dependency-review:
@@ -55,3 +59,4 @@ jobs:
           license-check:    ${{ inputs.license-check }}
           comment-summary-in-pr: ${{ inputs.comment-summary }}
           show-openssf-scorecard: ${{ inputs.openssf-check }}
+          retry-on-snapshot-warnings: ${{ inputs.retry-on-snapshot-warnings }}
