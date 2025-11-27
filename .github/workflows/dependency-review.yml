@@ -36,7 +36,7 @@ on:
       retry-on-snapshot-warnings:
         required: false
         type: boolean
-        default: true
+        default: false
 
 jobs:
   dependency-review:
