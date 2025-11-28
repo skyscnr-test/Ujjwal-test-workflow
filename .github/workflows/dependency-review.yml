@@ -10,7 +10,7 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest-codeql
     permissions:
-      contents: read          # needed by checkout + dep review
+      contents: write          # needed by checkout + dep review
       pull-requests: write    # so it can comment on the PR
 
     steps:
