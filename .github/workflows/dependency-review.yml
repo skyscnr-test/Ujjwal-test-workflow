@@ -10,19 +10,57 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest-codeql
     permissions:
-      contents: read
-      pull-requests: write
+      contents: read          # needed by checkout + dep review
+      pull-requests: write    # so it can comment on the PR
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ---- Detect Java/Gradle repo ------------------------------------
+      - name: Detect Java/Gradle project
+        id: detect_java
+        run: |
+          if [ -f "build.gradle" ] || [ -f "build.gradle.kts" ] \
+             || [ -f "gradlew" ] || [ -f "settings.gradle" ] \
+             || [ -f "settings.gradle.kts" ]; then
+            echo "is_java_gradle=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_java_gradle=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---- Java-only: submit dependency graph -------------------------
+      - name: Setup Java
+        if: steps.detect_java.outputs.is_java_gradle == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin          # or whatever you standardise on
+          java-version: '21'             # baseline; repos can override later if needed
+
+      - name: Setup Gradle
+        if: steps.detect_java.outputs.is_java_gradle == 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Login to Artifactory
+        if: steps.detect_java.outputs.is_java_gradle == 'true'
+        uses: skyscanner/configure-artifactory-credentials@v1.4.0
+        with:
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+
+      - name: Generate and submit dependency graph
+        if: steps.detect_java.outputs.is_java_gradle == 'true'
+        uses: gradle/actions/dependency-submission@v5
+        with:
+          dependency-graph: generate-and-submit
+
+      # ---- All repos: run dependency review ---------------------------
       - name: Dependency Review
         uses: actions/dependency-review-action@v4.8.2
         with:
-          fail-on-severity: high
-          fail-on-scopes:   runtime
-          vulnerability-check: true
-          license-check:    false
-          comment-summary-in-pr: true
-          show-openssf-scorecard: false
+          fail-on-severity:         high
+          fail-on-scopes:           runtime
+          vulnerability-check:      true
+          license-check:            false
+          comment-summary-in-pr:    true
+          show-openssf-scorecard:   false
