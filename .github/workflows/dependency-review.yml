@@ -1,7 +1,12 @@
 name: Dependency Review Reusable Workflow
 
 on:
+  push:
+    branches:
+      - "main"
   pull_request:
+    branches:
+      - "**"
 
 jobs:
   dependency-review:
