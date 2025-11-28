@@ -15,38 +15,48 @@ jobs:
 
     steps:
       - name: Checkout repository
+      # Required so all later steps can inspect the repo
         uses: actions/checkout@v4
 
-      # 1) Detect Java settings from main workflow (if present)
+      # --- Detect whether this is a Java repo and read Java settings from main workflow ---
       - name: Detect Java settings from main.yml
         id: java
+        shell: bash
         run: |
-          # Find main workflow file
+          # Default: assume non-Java
+          echo "is_java=false" >> "$GITHUB_OUTPUT"
+
+          # Find the main workflow file
           if [ -f .github/workflows/main.yml ]; then
             FILE=".github/workflows/main.yml"
           elif [ -f .github/workflows/main.yaml ]; then
             FILE=".github/workflows/main.yaml"
           else
-            echo "is_java=false" >> "$GITHUB_OUTPUT"
-            echo "No main workflow found, treating as non-Java"
+            echo "No main.yml(main.yaml) found, treating as non-Java."
             exit 0
           fi
 
-          # Grab first java-version and distribution in the file
-          JAVA_VERSION=$(grep "java-version:" "$FILE" | head -1 | sed -E "s/.*java-version:\s*'?(.*)'?/\1/")
-          DIST=$(grep "distribution:" "$FILE" | head -1 | sed -E "s/.*distribution:\s*'?(.*)'?/\1/")
+          # Grab the first java-version and distribution lines
+          RAW_JAVA_VERSION=$(grep "java-version:" "$FILE" | head -1 | cut -d':' -f2- | xargs || true)
+          RAW_DIST=$(grep "distribution:" "$FILE" | head -1 | cut -d':' -f2- | xargs || true)
+
+          # Strip any surrounding quotes
+          JAVA_VERSION=${RAW_JAVA_VERSION//\"/}
+          JAVA_VERSION=${JAVA_VERSION//\'/}
+          DIST=${RAW_DIST//\"/}
+          DIST=${DIST//\'/}
 
           if [ -n "$JAVA_VERSION" ] && [ -n "$DIST" ]; then
             echo "is_java=true" >> "$GITHUB_OUTPUT"
             echo "java_version=$JAVA_VERSION" >> "$GITHUB_OUTPUT"
             echo "distribution=$DIST" >> "$GITHUB_OUTPUT"
-            echo "Detected Java repo: $DIST $JAVA_VERSION"
+            echo "Detected Java repo: distribution=$DIST, java_version=$JAVA_VERSION"
           else
-            echo "is_java=false" >> "$GITHUB_OUTPUT"
-            echo "No setup-java step found in main.yml, treating as non-Java"
+            echo "No setup-java config found in main workflow, treating as non-Java."
           fi
 
-      # 2) For Java repos: setup Java & submit dependency graph
+      # --- Java-only: setup toolchain & submit dependency graph to GHAS ---
+
       - name: Setup Java (Java repos only)
         if: steps.java.outputs.is_java == 'true'
         uses: actions/setup-java@v4
@@ -54,19 +64,34 @@ jobs:
           distribution: ${{ steps.java.outputs.distribution }}
           java-version: ${{ steps.java.outputs.java_version }}
 
+      - name: Setup Gradle (Java repos only)
+        if: steps.java.outputs.is_java == 'true'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Login to Artifactory (Java repos only)
+        if: steps.java.outputs.is_java == 'true'
+        uses: skyscanner/configure-artifactory-credentials@v1.4.0
+        with:
+          username: ${{ secrets.ARTIFACTORY_USERNAME }}
+          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
+
       - name: Submit dependency graph (Java repos only)
         if: steps.java.outputs.is_java == 'true'
-        uses: gradle/actions/dependency-submission@f236b35da9d031e13b1005234ebe4392ed54c580
+        uses: gradle/actions/dependency-submission@f236b35da9d031e13b1005234ebe4392ed54c580 # v5.0.0
         with:
           dependency-graph: generate-and-submit
+          # If some Java repos don't use Gradle wrapper, uncomment and set a default:
+          # gradle-version: '8.7'
 
-      # 3) Always: run Dependency Review
+      # --- Dependency Review for all repos ---
+
       - name: Dependency Review
         uses: actions/dependency-review-action@v4.8.2
         with:
-          fail-on-severity:       high
-          fail-on-scopes:         runtime
-          vulnerability-check:    true
-          license-check:          false
-          comment-summary-in-pr:  true
+          fail-on-severity: high
+          fail-on-scopes: runtime
+          vulnerability-check: true
+          license-check: false
+          comment-summary-in-pr: true
           show-openssf-scorecard: false
+          retry-on-snapshot-warnings: true
