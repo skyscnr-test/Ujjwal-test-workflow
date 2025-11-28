@@ -1,38 +1,7 @@
 name: Dependency Review Reusable Workflow
 
 on:
-  workflow_call:
-    inputs:
-      runner:
-        required: false
-        type: string
-        default: ubuntu-latest-codeql
-        description: A specific runner to use for the job.
-
-      fail-on-severity:
-        required: false
-        type: string
-        default: high     # low | moderate | high | critical
-
-      fail-on-scopes:
-        required: false
-        type: string
-        default: runtime  # runtime | development | all
-
-      license-check:
-        required: false
-        type: boolean
-        default: false
-
-      openssf-check:
-        required: false
-        type: boolean
-        default: false
-
-      comment-summary:
-        required: false
-        type: boolean
-        default: true
+  pull_request:
 
 jobs:
   dependency-review:
@@ -49,9 +18,9 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v4.8.2
         with:
-          fail-on-severity: ${{ inputs.fail-on-severity }}
-          fail-on-scopes:   ${{ inputs.fail-on-scopes }}
+          fail-on-severity: high
+          fail-on-scopes:   runtime
           vulnerability-check: true
-          license-check:    ${{ inputs.license-check }}
-          comment-summary-in-pr: ${{ inputs.comment-summary }}
-          show-openssf-scorecard: ${{ inputs.openssf-check }}
+          license-check:    false
+          comment-summary-in-pr: true
+          show-openssf-scorecard: false
